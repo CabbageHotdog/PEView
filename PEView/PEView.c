@@ -213,6 +213,7 @@ void PrintImageFileHeader(FILE* fp, OPTION option) {
 	}
 	else if (option.View_mod == VIEW_MOD_VALUE) {
 		printf("%08X\t%04X\t\tMachine\n", start_offset + (char*)&Image_NT_Header.FileHeader.Machine - std_offset, Image_NT_Header.FileHeader.Machine);
+		CheckMachineFileHeader(Image_NT_Header.FileHeader.Machine);
 		printf("%08X\t%04X\t\tNumber of Section\n", start_offset + (char*)&Image_NT_Header.FileHeader.NumberOfSections - std_offset, Image_NT_Header.FileHeader.NumberOfSections);
 		printf("%08X\t%08X\tTime Date Stamp\n", start_offset + (char*)&Image_NT_Header.FileHeader.TimeDateStamp - std_offset, Image_NT_Header.FileHeader.TimeDateStamp);
 		printf("%08X\t%08X\tPointer ot Symbol Table\n", start_offset + (char*)&Image_NT_Header.FileHeader.PointerToSymbolTable - std_offset, Image_NT_Header.FileHeader.PointerToSymbolTable);
@@ -261,6 +262,7 @@ void PrintImageOptionalHeader(FILE* fp, OPTION option) {
 		printf("%08X\t%08X\tChecksum\n", start_offset + (char*)&Image_NT_Header.OptionalHeader.CheckSum - std_offset, Image_NT_Header.OptionalHeader.CheckSum);
 		printf("%08X\t%04X\t\tSubsystem\n", start_offset + (char*)&Image_NT_Header.OptionalHeader.Subsystem - std_offset, Image_NT_Header.OptionalHeader.Subsystem);
 		printf("%08X\t%04X\t\tDLL Characteristics\n", start_offset + (char*)&Image_NT_Header.OptionalHeader.DllCharacteristics - std_offset, Image_NT_Header.OptionalHeader.DllCharacteristics);
+		CheckDllCharacteristicsOptionalHeader(Image_NT_Header.OptionalHeader.DllCharacteristics);
 		printf("%08X\t%08X\tSize of Stack Reserve\n", start_offset + (char*)&Image_NT_Header.OptionalHeader.SizeOfStackReserve - std_offset, Image_NT_Header.OptionalHeader.SizeOfStackReserve);
 		printf("%08X\t%08X\tSize of Stack Commit\n", start_offset + (char*)&Image_NT_Header.OptionalHeader.SizeOfStackCommit - std_offset, Image_NT_Header.OptionalHeader.SizeOfStackCommit);
 		printf("%08X\t%08X\tSize of Heap Reserve\n", start_offset + (char*)&Image_NT_Header.OptionalHeader.SizeOfHeapReserve - std_offset, Image_NT_Header.OptionalHeader.SizeOfHeapReserve);
@@ -308,6 +310,7 @@ void PrintImageSectionHeader(FILE* fp, OPTION option) {
 			printf("%08X\t%04X\t\tNumber Of Relocations\n", start_offset + (char*)&Image_Section_Header[i].NumberOfRelocations - std_offset + 4, Image_Section_Header[i].NumberOfRelocations);
 			printf("%08X\t%04X\t\tNumber Of Line Numbers\n", start_offset + (char*)&Image_Section_Header[i].NumberOfLinenumbers - std_offset + 4, Image_Section_Header[i].NumberOfLinenumbers);
 			printf("%08X\t%08X\tCharacteristics\n", start_offset + (char*)&Image_Section_Header[i].Characteristics - std_offset + 4, Image_Section_Header[i].Characteristics);
+			CheckCharacteristiceSectionHeaders(Image_Section_Header[i].Characteristics);
 			printf("\n\n");
 		}
 	}
