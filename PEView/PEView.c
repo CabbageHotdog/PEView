@@ -1,3 +1,5 @@
+#define _CRT_SECURE_NO_WARNINGS 
+
 #include<stdio.h>
 #include<stdlib.h> 
 #include<time.h> // 프로그램 동작 시간을 측정하기 위한 헤더파일
@@ -21,12 +23,14 @@ void SetProgramBit(FILE* f);
 void SetImageDosHeader(FILE* f);
 void SetImageNTHeader(FILE* f);
 void SetImageSectionHeader(FILE* f);
+int MZSignatureCheck(FILE* f);
 void PrintImageDosHeader(FILE* fp, OPTION option);
 void PrintDOSStub(FILE* fp, OPTION option);
 void PrintImageNTHeader(FILE* fp, OPTION option);
 void PrintImageFileHeader(FILE* fp, OPTION option);
 void PrintImageOptionalHeader(FILE* fp, OPTION option);
 void PrintImageSectionHeader(FILE* fp, OPTION option);
+void PrintMainPoint(OPTION option);
 void PrintRawData(FILE* fp, int startoffset, int size, OPTION option);
 void PrintOptions(OPTION option);
 char GetOption(char* o);
@@ -47,6 +51,7 @@ unsigned char* DataDirectoryMsg[16] = { "EXPORT", "IMPORT", "RESOURCE", "EXCEPTI
 "DEBUG", "COPYRIGHT", "GLOBALPTR", "TLS", "LOAD_CONFIG", "BOUND_IMPORT", "IAT", "DELAY_IMPORT", "COM_DESCRIPTOR",
 "Reserved" };
 char DisplayCount = -1;
+char* filename;
 //char* ImageDosHeaderStr[] = { "Signature", "Bytes on last Page of file", "Pages in file", "Relocations", "Size of header in paragraphs", 
 //"Minimum extra paragraph needed", "Maximum extra paragraph needed", "Initial (relative) SS value", "Initial SP value", "Checksum", 
 //"Initial IP value", "Initial (relative) CS value", "File address of relocation table", "Overlay number", "Reserved", "Reserved","Reserved","Reserved",
@@ -60,9 +65,13 @@ void PrintLine(OPTION option) {
 		if (DisplayCount == 3) {
 			DisplayCount += 2;
 		}
+		if (DisplayCount == 0) {
+			printf("%s\n", filename);
+		}
 	}
 	else {
 		DisplayCount = option.display - 1;
+		printf("%s - ", filename);
 	}
 	printf("%s\n", dmodmsg[DisplayCount]);
 	printf("%s\n%s\t\t%s\n%s\n", LINE, amodmsg[option.Address_mod], vmodmsg[option.View_mod], LINE);
@@ -86,7 +95,6 @@ void SetImageDosHeader(FILE* f) {
 }
 
 void SetImageNTHeader(FILE* f) {
-	//Image_NT_Header.OptionalHeader.DataDirectory = malloc(sizeof(IMAGE_DATA_DIRECTORY) * Image_NT_Header.OptionalHeader.NumberOfRvaAndSizes);
 	fseek(f, NTHeaderOffset, SEEK_SET);
 	fread(&Image_NT_Header, sizeof(Image_NT_Header), 1, f);
 }
@@ -95,6 +103,19 @@ void SetImageSectionHeader(FILE* f) {
 	int NumberOfSection = Image_NT_Header.FileHeader.NumberOfSections;
 	Image_Section_Header = (IMAGE_SECTION_HEADER*)malloc(sizeof(IMAGE_SECTION_HEADER) * NumberOfSection);
 	fread(Image_Section_Header, sizeof(IMAGE_SECTION_HEADER), NumberOfSection, f);
+}
+
+int MZSignatureCheck(FILE* f) {
+	WORD mz;
+	fseek(f, 0, SEEK_SET);
+	fread(&mz, sizeof(WORD), 1, f);
+	fseek(f, 0, SEEK_SET);
+	if (mz == 0x5a4d) {
+		return 1;
+	}
+	else {
+		return 0;
+	}
 }
 
 void PrintImageDosHeader(FILE* fp, OPTION option) {
@@ -198,6 +219,7 @@ void PrintImageFileHeader(FILE* fp, OPTION option) {
 		printf("%08X\t%08X\tNumber of Sysbols\n", start_offset + (char*)&Image_NT_Header.FileHeader.NumberOfSymbols - std_offset, Image_NT_Header.FileHeader.NumberOfSymbols);
 		printf("%08X\t%04X\t\tSize of Optional Header\n", start_offset + (char*)&Image_NT_Header.FileHeader.SizeOfOptionalHeader - std_offset, Image_NT_Header.FileHeader.SizeOfOptionalHeader);
 		printf("%08X\t%04X\t\tCharacteristics\n", start_offset + (char*)&Image_NT_Header.FileHeader.Characteristics - std_offset, Image_NT_Header.FileHeader.Characteristics);
+		CheckCharacteristicsFileHeader(Image_NT_Header.FileHeader.Characteristics);
 	}
 
 	printf("\n\n");
@@ -291,6 +313,19 @@ void PrintImageSectionHeader(FILE* fp, OPTION option) {
 	}
 }
 
+// 출력할 것들
+// entry point(rva)
+// entry point(raw)
+// Image base
+// size of image
+// sections alignment
+// file alignment
+// number of section
+// dll characteristics
+void PrintMainPoint(OPTION option) {
+	
+}
+
 // 50000바이트 기준 약 1.5초
 void PrintRawData(FILE* fp, int startoffset, int size, OPTION option) {
 	unsigned char* buf = (char*)malloc(sizeof(char) * size);
@@ -312,26 +347,6 @@ void PrintRawData(FILE* fp, int startoffset, int size, OPTION option) {
 	free(buf);
 }
 
-
-// 표시할 것들
-// -A : All						(0)
-// -D : DOSHeader				(1)
-// -d : DOSStub					(2)
-// -N : NTHeader				(3)
-// -F : FileHeader				(4)
-// -O : OptionalHeader			(5)
-// -S : SectionHeader			(6)
-// -C : Section					(7)
-
-// 주소 표시
-// -f : 파일 오프셋으로 표시		(0)
-// -v : VA로 표시				(1)
-// -r : RVA로 표시				(2)
-
-// 표시 방법
-// -R : Raw Data				(0)
-// -V : Value					(1)
-// -M : Main point				(2)
 void PrintOptions(OPTION option) {
 	if (option.View_mod != VIEW_MOD_HELP) {
 		return;
@@ -465,7 +480,6 @@ int main(int argc, char* argv[]) {
 	FILE* fp;
 	OPTION options;
 	char option;
-	char* filename = strrchr(argv[argc - 1], '\\') + 1;
 
 	// 최소 옵션 개수 검사
 	if (argc < 2) {
@@ -475,11 +489,11 @@ int main(int argc, char* argv[]) {
 		PrintOptions(options);
 		return -1;
 	}
-	// 파일 유무 검사
-	if (access(argv[argc - 1], 0)) {
-		printf("File not found.\n");
-		return -1;
-	}
+	//// 파일 유무 검사
+	//if (access(argv[argc - 1], 0)) {
+	//	printf("File not found.\n");
+	//	return -1;
+	//}
 
 	// 옵션 초기화
 	InitOptions(&options);
@@ -489,11 +503,29 @@ int main(int argc, char* argv[]) {
 
 	// 파일 열기
 	fp = fopen(argv[argc - 1], "rb");
+
 	// 파일 열렸나 검사
 	if (fp == NULL) {
-		printf("파일열기 실패\n");
+		printf("Failed to open file\n");
 		return -1;
 	}
+
+	// MZ Signature 검사
+	if (!(MZSignatureCheck(fp))) {
+		printf("Not PE File\n");
+		return -1;
+	}
+
+	// 파일 경로에서 파일 이름 추출
+	filename = strrchr(argv[argc - 1], '\\');
+	if (!filename) {
+		filename = strrchr(argv[argc - 1], '/');
+	}
+	if (!filename) {
+		filename = argv[argc - 1];
+	}
+	filename++;
+
 	// 파일 크기 저장
 	size = GetFileSize(fp);
 
@@ -511,7 +543,6 @@ int main(int argc, char* argv[]) {
 	// IMAGE_SECTION_HEADER 셋팅
 	SetImageSectionHeader(fp);
 
-	printf("%s - ", filename);
 	// DOS Header 출력
 	PrintImageDosHeader(fp, options);
 
@@ -529,6 +560,8 @@ int main(int argc, char* argv[]) {
 
 	// IMAGE_SECTION_HEADER 출력
 	PrintImageSectionHeader(fp, options);
+
+	PrintMainPoint(options);
 
 
 	/*start = clock();

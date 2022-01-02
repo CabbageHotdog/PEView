@@ -141,6 +141,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="PEView.c" />
+    <ClCompile Include="testheader.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headerinfo.h" />
