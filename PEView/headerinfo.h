@@ -276,6 +276,22 @@ typedef struct _IMAGE_SECTION_HEADER {
 	DWORD Characteristics;
 } IMAGE_SECTION_HEADER, * PIMAGE_SECTION_HEADER;
 
+typedef struct _IMAGE_IMPORT_DESCRIPTOR {
+	union {
+		DWORD Characteristics;
+		DWORD OriginalFirstThunk;
+	};
+	DWORD TimeDataStamp;
+	DWORD ForwarderChain;
+	DWORD Name;
+	DWORD FirstThunk;
+} IMAGE_IMPORT_DESCRIPTOR;
+
+typedef struct _IMAGE_IMPORT_BY_NAME {
+	WORD Hint;
+	BYTE Name[1];
+} IMAGE_IMPORT_BY_NAME, *PIMAGE_IMPORT_BY_NAME;
+
 void CheckCharacteristicsFileHeader(WORD ch);
 void CheckMachineFileHeader(WORD m);
 void CheckDllCharacteristicsOptionalHeader(WORD ch);

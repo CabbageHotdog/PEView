@@ -38,6 +38,7 @@ int GetFileSize(FILE* fp);
 void InitOptions(OPTION* options);
 void SetOptions(OPTION* options, int argc, char* argv[]);
 void PrintLine(OPTION option);
+__int64 RVAtoRAW(__int64 rva);
 
 unsigned int Machine = 0;
 LONG NTHeaderOffset = 0;
@@ -452,6 +453,24 @@ void SetOptions(OPTION* options, int argc, char* argv[]) {
 	/*printf("option.Address_mod : %d\n", options->Address_mod);
 	printf("option.View_mod : %d\n", options->View_mod);
 	printf("option.asdf : %d\n", options->asdf);*/
+}
+
+__int64 RVAtoRAW(__int64 rva) {
+	__int64 raw;
+	int NumberOfSections = Image_NT_Header.FileHeader.NumberOfSections;
+	for (int i = 0; i < NumberOfSections; i++) {
+		if (Image_Section_Header[i].VirtualAddress < rva && rva < Image_Section_Header[i].VirtualAddress + Image_Section_Header[i].Misc.VirtualSize) {
+			raw = rva - Image_Section_Header[i].VirtualAddress + Image_Section_Header[i].PointerToRawData;
+			if (Image_Section_Header[i].PointerToRawData < raw && raw < Image_Section_Header[i].PointerToRawData + Image_Section_Header[i].SizeOfRawData) {
+				return raw;
+			}
+			// raw값의 위치가 다른 섹션에 있을 경우
+			else {
+				return -1;
+			}
+		}
+	}
+	return 0;
 }
 
 
